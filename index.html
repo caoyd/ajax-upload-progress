@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Ajax Progress</title>
+
+<!-- Meta -->
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width">
+
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+
+<!-- Google CDN -->
+<script src="/js/jquery.js"></script>
+
+<script src="js/jquery.ajax-progress.js"></script>
+<script>
+    // Download
+    $(function() {
+        var $prog = $('#prog').find('progress');
+        var $info = $('#prog').find('span');
+        
+        $.ajax({
+            method: 'GET',
+            url: 'data/html',
+            dataType: 'html',
+            progress: function(e) {
+                if (e.lengthComputable) {
+                    var pct = (e.loaded / e.total) * 100;
+                    $prog.val(pct);
+                    $info.text(Math.floor(pct) + '%');
+                } else {
+                    console.warn('Content Length not reported!');
+                }
+            }
+        })
+        .done(function(data) {
+            console.log('done')
+        })
+        .error(function(err){
+            console.log('AWWW!');
+        });
+    });
+</script>
+</head>
+<body>
+    <h2>Download</h2>
+    <div class="prog" id="prog"><progress value="0" max="100"></progress><span></span></div>
+    <div id="downloaded"></div>
+
+    <h2>Upload</h2>
+    <!-- <div class="prog" id="prog2"><progress value="0" max="100"></progress><span></span></div> -->
+    <form enctype="multipart/form-data" id="myform">
+        <b>Choose Image to upload.</b>
+        <br/>
+        <input type="file" name="file" id="image" accept="image/gif, image/jpeg, image/png" />
+        <br/>
+        <font color=red>Note: Choose only .gif, .jpeg, .jpg, .png images only..!!</font>
+        <br/>
+        <input type="button" value="Upload image" class="upload" />
+    </form>
+    <div id="progBar" style="display:none;">
+        <progress value="0" max="100"></progress><span id="prog2" style="font-weight:bold;">0%</span>
+    </div>
+    <div id="alertMsg" style="font-size:16px; color:blue; display:none;"></div>
+
+</body>
+<script>
+$(function () {
+    $(".upload").click(function () {
+        var fl = $("#image");
+        if (fl.val() == "") {
+            flashMsg("Please choose image to upload.");
+            return false;
+        }
+        $("#progBar").show();
+        $(this).attr('disabled', 'disabled');
+        var form = new FormData($("#myform")[0]);
+        var count = $("table#tb tr").length;
+        $.ajax({
+            url: 'upload.php',
+            type: 'POST',
+            data: form,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            xhr: function () {
+                var myXhr = $.ajaxSettings.xhr();
+                if (myXhr.upload) {
+                    myXhr.upload.addEventListener('progress', progress, false);
+                }
+                return myXhr;
+            }
+        })
+        .done(function (res) {
+            fl.val('');
+            flashMsg(res.msg);
+            $("#file").val();
+            $(".upload").removeAttr('disabled');
+            $("#progBar").hide();
+            resetProgressBar();
+        })
+        .error(function (e) {
+            if (e.readyState !== 4 || e.status !== 200) {
+                console.log("error occurred to upload image!");
+            }
+        });
+    });
+
+    // Proress bar
+    function progress(e) {
+        if (e.lengthComputable) {
+            $('#progBar progress').attr({
+                value: e.loaded,
+                max: e.total
+            });
+            var percentage = (e.loaded / e.total) * 100;
+            $('#prog2').html(percentage.toFixed(0) + '%');
+        }
+    }
+
+    function resetProgressBar() {
+        $('#prog2').html('0%');
+        $('#progBar progress').attr({
+            value: 0,
+            max: 100
+        });
+    }
+
+    // Flash message 
+    function flashMsg(msg) {
+        $("#alertMsg").fadeIn(1000).html(msg).fadeOut(5000);
+    }
+
+
+});
+</script>
+</html>
